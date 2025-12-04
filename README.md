@@ -1,84 +1,175 @@
 # 🔍 Semantic Leakage in Language Models  
-### A Replication of *“Does Liking Yellow Imply Driving a School Bus?”* with an Indonesian Extension
+**Replication of “Does Liking Yellow Imply Driving a School Bus?” with an Indonesian Extension**
 
-This project is a **clean, end-to-end replication** of the core *semantic leakage* framework proposed in:
+This project presents a **clean replication and cross-lingual extension** of the semantic leakage study introduced in:
 
-> **Does Liking Yellow Imply Driving a School Bus?  
-> Semantic Leakage in Language Models** (2024)
+> *Does Liking Yellow Imply Driving a School Bus? Semantic Leakage in Language Models* (Federici et al., 2024)
 
-with an added **cross-lingual extension to Indonesian** and an **interactive Streamlit UI** for exploration.
+It measures how **irrelevant concepts in a prompt unintentionally influence model generations**, and extends the original study with:
 
-The goal of this project is to:
-- Reproduce the **Leak-Rate** metric proposed in the paper
-- Analyze **semantic leakage behavior in English**
-- Extend the analysis to **Bahasa Indonesia**
-- Provide a **fully interactive research demo interface**
+- ✅ **Bahasa Indonesia evaluation**
+- ✅ **Interactive Streamlit UI for visualization**
 
 ---
 
-## 🚀 What is *Semantic Leakage*?
+## 🧠 What is Semantic Leakage?
 
-Semantic leakage refers to the phenomenon where **language models unintentionally inject unrelated semantic concepts into their generation** simply because those concepts appear earlier in the prompt.
+Semantic leakage occurs when a language model’s output is influenced by a concept that is **logically unrelated** to the task, simply because that concept appears earlier in the prompt.
 
-### Example
+**Example**
 
-**Control Prompt**
-> *“Complete the sentence: His favorite food is …”*
+- Control prompt:  
+  *“Complete the sentence: His favorite food is …”*
 
-**Test Prompt**
-> *“He likes koalas. His favorite food is …”*
+- Test prompt:  
+  *“He likes koalas. His favorite food is …”*
 
-Even though liking koalas has **no logical relation** to food, models often generate food related to animals (e.g., *eucalyptus*).  
-This unintended influence is what we quantify as **semantic leakage**.
+If the model now generates food related to animals, the concept **“koalas” has leaked** into the output.
+
+This project measures that effect **systematically and quantitatively**.
 
 ---
 
-## 📏 Leak-Rate Metric
+## 📏 Leak-Rate (Evaluation Metric)
 
 For each concept:
-1. Generate multiple samples for **control prompts**
-2. Generate multiple samples for **test prompts**
-3. Measure similarity:
-   - `sim(concept, control_generation)`
-   - `sim(concept, test_generation)`
-4. Define **Leak-Rate**:
 
-| Case | Score |
-|------|--------|
-| `test > control` | 1 |
-| `test < control` | 0 |
-| equal | 0.5 |
+1. Generate multiple completions for:
+   - a **control prompt**
+   - a **test prompt** (control + injected concept)
+2. Compute semantic similarity between:
+   - the **concept word**
+   - each generated completion
+3. Define Leak-Rate as the percentage of cases where:
 
-Final Leak-Rate is the **average over all samples**, reported as a percentage.
+```
+similarity(concept, test) > similarity(concept, control)
+```
 
----
-
-## 🌍 What This Project Adds
-
-Beyond basic replication, this project introduces:
-
-✅ **Indonesian (Bahasa Indonesia) Extension**  
-✅ **Side-by-side English vs Indonesian leakage behavior**  
-✅ **Interactive Streamlit UI**  
-✅ **Configurable temperature & sampling**  
-✅ **Multiple embedding backends (SBERT / OpenAI)**  
-✅ **Clean research logging & CSV export**
-
-This makes the project both:
-- 📚 **Publication-style**
-- 💻 **Portfolio-ready & demo-friendly**
+- ~50% → no systematic leakage  
+- Higher values → stronger semantic leakage  
 
 ---
 
-## 🗂 Project Structure
+## 🌍 Indonesian Extension
 
-```text
+The exact same leakage evaluation pipeline is also applied to **Bahasa Indonesia**:
+
+- Prompts are translated into Indonesian  
+- The same concept structure is preserved  
+- The same evaluation metric is used  
+
+This enables **direct cross-lingual comparison of leakage behavior**.
+
+---
+
+## 📁 Project Structure
+
+```
 semantic-leakage-replication/
 ├─ data/
-│  ├─ prompts_en.csv          # English prompt pairs
-│  └─ prompts_id.csv          # Indonesian prompt pairs
-├─ results/                   # Auto-generated results
-├─ config.py                  # API + experiment config
-├─ semantic_leakage_core.py   # Core experiment logic
-├─ run_experiments.py         # Batch runner
-└─ app.py                     # Streamlit UI
+│  ├─ prompts_en.csv        # English prompt pairs
+│  └─ prompts_id.csv        # Indonesian prompt pairs
+├─ results/                 # Auto-generated leakage scores
+├─ config.py                # Experiment configuration
+├─ semantic_leakage_core.py # Generation, embeddings, Leak-Rate logic
+├─ run_experiments.py       # Batch experiment runner
+└─ app.py                   # Streamlit UI
+```
+
+---
+
+## 📂 Dataset
+
+The project uses paired **control** and **test** prompts stored in CSV files:
+
+- `data/prompts_en.csv` — English prompt pairs  
+- `data/prompts_id.csv` — Indonesian prompt pairs  
+
+Each row follows this format:
+
+```csv
+id,concept,category,control_prompt,test_prompt
+1,koalas,animals,"Complete the sentence: His favorite food is","Complete the sentence: He likes koalas. His favorite food is"
+```
+
+Indonesian example:
+
+```csv
+id,concept,category,control_prompt,test_prompt
+1,koala,animals,"Lengkapi kalimat: Makanan favoritnya adalah","Lengkapi kalimat: Dia suka koala. Makanan favoritnya adalah"
+```
+
+The **only difference** between the control and test prompts is the **injected concept**, allowing precise isolation of semantic leakage.
+
+---
+
+## ⚙️ Running the Experiments
+
+### ▶ Batch Evaluation
+
+Runs the full leakage evaluation and saves results:
+
+```bash
+python run_experiments.py
+```
+
+This generates result files such as:
+
+```
+results/leakage_en_*.csv
+results/leakage_id_*.csv
+```
+
+Each file contains per-concept Leak-Rates with metadata (language, category, embedding backend).
+
+---
+
+### 🖥 Interactive UI
+
+Launch the dashboard with:
+
+```bash
+streamlit run app.py
+```
+
+The interface allows users to:
+
+- Switch between **English and Indonesian**
+- Compare **embedding backends**
+- Adjust **temperature and sampling**
+- Visualize:
+  - Overall Leak-Rate
+  - Category-level leakage patterns
+  - Per-concept leakage rankings
+
+This makes the project suitable for **presentations, demos, and qualitative inspection**.
+
+---
+
+## 🎯 What This Project Demonstrates
+
+This project showcases:
+
+- Behavioral evaluation of large language models  
+- Embedding-based semantic similarity analysis  
+- Multilingual robustness testing  
+- Reproducible evaluation pipelines  
+- Interactive research visualization with Streamlit  
+
+It serves as a **foundation project in multilingual NLP, interpretability, and LLM behavior analysis**.
+
+---
+
+## 📜 Reference
+
+```bibtex
+@inproceedings{gonen-etal-2025-liking,
+  title     = {Does Liking Yellow Imply Driving a School Bus? Semantic Leakage in Language Models},
+  author    = {Gonen, Hila and Blevins, Terra and Liu, Alisa and Zettlemoyer, Luke and Smith, Noah A.},
+  booktitle = {Proceedings of the 2025 Conference of the Nations of the Americas Chapter of the Association for Computational Linguistics: Human Language Technologies},
+  year      = {2025},
+  address   = {Albuquerque, New Mexico},
+  publisher = {Association for Computational Linguistics},
+}
+```
